@@ -1,0 +1,219 @@
+---
+title: "Energia"
+author: "Kevin Chierchia"
+date: "15/8/2021"
+output:
+  ioslides_presentation:
+    css: ./style.css
+    incremental: yes
+  slidy_presentation:
+    incremental: yes
+  beamer_presentation:
+    incremental: yes
+editor_options:
+  chunk_output_type: inline
+---
+
+
+## Analisi dei dati sulla produzione di energia e sulle emissioni di CO2
+
+* La battaglia sulle **energie rinnovabili** sembra non poter essere vinta a causa della nota poca affidabilita' degli impianti "verdi". 
+* Il vantaggio delle energie rinnovabili, oltre a sostituire fonti di energia come il petrolio la cui disponibilita' diviene sempre piu' limitata, e' quello di ridurre le enormi **emissioni di anidride carbonica**.
+* Esistono delle valide alternative alle fonti di energia rinnovabili, come il **nucleare**. 
+* Lo scopo di questa raccolta ed elaborazione di dati e' quello di scongiurare il luogo comune che l'energia nucleare sia altamente piu' inquinante delle risorse tradizionali.
+
+```{r setup, include=FALSE, echo=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+library(scales)
+library(formattable)
+nuclear_energy_generation <- read_csv("~/Desktop/kc/Uniud/DataScience/nuclear-energy-generation.csv")
+traditional_energy_generation <- read_csv("~/Desktop/kc/Uniud/DataScience/global-energy-substitution.csv")
+co2_emissions <- read_csv("~/Desktop/kc/Uniud/DataScience/CO2-by-source.csv")
+standard_emissions <- read_csv("~/Desktop/kc/Uniud/DataScience/emissions.csv")
+
+```
+
+
+
+## Cosa si intende con energia?
+
+Con energia non si intende solo l'energia elettrica prodotta da un impianto ma ogni tipo di energia. Per esempio nel caso del petrolio e dei suoi derivati si considera nel totale dell'energia prodotta anche quella generata dai motori termici delle **automobili**. La stessa considerazione viene fatta per le emissioni.
+
+### **Energia tradizionale**
+Si intendono i **combustibili fossili** come il carbone e il petrolio (con tutti i suoi derivati). Consideriamo anche i gas naturali.
+
+### **Energia rinnovabile**
+Energia eolica, idroelettrica...
+
+
+
+## Produzione di energia dal 1800
+
+Il seguente grafico rappresenta i dati relativi alla produzione di energia di ogni tipo (rinnovabile, tradizionale e nucleare) negli ultimi 200 anni.
+
+
+```{r global_traditional_energy_generation, echo=FALSE}
+
+  require(ggplot2)
+  require(scales)
+  df <- data.frame(x=seq(1, 1e9, length.out=100), y=sample(20))
+  Traditional_energy <- rowSums(traditional_energy_generation[, c(5,12,13)]) 
+  Nuclear_energy <- rowSums(traditional_energy_generation[, c(6)])
+  Total_Energy_Production <- rowSums(traditional_energy_generation[, c(4:13)])
+  
+  traditional_energy_generation %>%
+    ggplot(df, mapping = aes(x = Year, y = Total_Energy_Production)) + scale_y_continuous(label = number) + 
+    geom_line(aes(y = Total_Energy_Production, color = "Energia totale")) + 
+    geom_line(aes(y = Traditional_energy, color = "Energia tradizionale")) + 
+    geom_line(aes(y = Nuclear_energy, color = "Energia nucleare")) + 
+    labs(title="Confronto tra fonti diverse", colour="Legenda") +
+    ylab("TWh") + xlab("Anno")
+
+```
+
+
+
+## Energia nucleare
+
+Nel seguente grafico invece e' rappresentata solo la produzione di energia nucleare (dall'inizio degli anni 80).
+
+
+```{r nuclear_energy_generation, echo=FALSE}
+
+nuclear_energy_generation %>% # different years' mean of nuclear energy production 
+  filter(Entity == "World") %>%
+  group_by(Year) %>%
+  summarise(TWh = sum(`Electricity from nuclear (TWh)`)) %>%
+  ggplot(aes(x = Year, y = TWh)) + # builidng graph axes
+  geom_line(color = "darkgreen", size = 1) +
+  labs() +
+  xlab("Anno")
+
+```
+
+
+
+## Considerazioni
+
+Si puo' notare che nel 2020 la produzione di energia nucleare copre solo l'**4,30%** della produzione energetica mondiale.
+I motivi sono diversi e anche molto complessi da spiegare senza entrare in ambito storico storico e politico. 
+
+```{r comparison, echo=FALSE}
+
+totale <- rowSums(traditional_energy_generation[72, c(4:7,9,11:13)])
+rinnovabile <- rowSums(traditional_energy_generation[72, c(4,7,9,11)]) 
+nucleare <- rowSums(traditional_energy_generation[72, c(6)])
+tradizionale <- rowSums(traditional_energy_generation[72, c(5,12,13)])
+
+rinnovabile_perc <- formattable(rinnovabile*100/totale, digits = 2, format = "f")
+nucleare_perc <- formattable(nucleare*100/totale, digits = 2, format = "f")
+tradizionale_perc <- formattable(tradizionale*100/totale, digits = 2, format = "f")
+
+grafo <- data.frame(
+  category = c("Tradizionale","Nucleare","Rinnovabile"),
+  amount = c(tradizionale_perc, nucleare_perc, rinnovabile_perc)
+)
+
+bp <- ggplot(grafo, aes(x="", y=amount, fill=category))+
+geom_bar(width = 1, stat = "identity")
+
+bp + coord_polar("y") +
+  geom_text(aes(label = paste0(amount, "%")), position = position_stack(vjust=0.5)) +
+  labs(title = "Produzione a confronto", x = NULL, y = NULL, fill = NULL) +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank()) +
+  scale_fill_manual(values=c("#BF3EFF", "#00FF00", "#0080FF"))
+
+```
+
+
+
+## Emissioni
+
+Il seguente grafico riporta le tonnellate di CO2 per TWh.
+I dati utilizzati sono stati presi da diverse fonti online, spesso contrastanti, e poi modificati per renderli omogenei.
+
+
+```{r emissions, echo=FALSE}
+
+standard_emissions %>%
+  ggplot(aes(Fonte, `emissioni/TWh`)) +
+  geom_col(aes(fill = Fonte)) +
+  labs() +
+  ylab("Tonnellate di CO2 per TWh")
+
+```
+
+
+
+## Un po' di conti
+Possiamo calcolare la quantita' di tonnellate di anidride carbonica che sarebbe stata emessa nel tempo, nell'ipotesi in cui tutta l'energia fosse stata prodotta solo ed esclusivamente attraverso impianti nucleari.
+```{r theorical_emissions, echo=FALSE}
+
+  options(scipen=10000)
+  real_emissions <- co2_emissions %>% 
+    filter(Entity == "World" & co2_emissions$Year %in% traditional_energy_generation$Year) 
+  theorical_nuclear_emissions <- Traditional_energy * 70 # 70 ?? la stima di tonnellate di CO2 emessa per TWh
+  real_emissions <- data.frame(Year = real_emissions$Year, emissions = rowSums(real_emissions[, c(4,5,7,8)]))
+  
+  real_emissions %>%
+    ggplot(aes(x = Year, y = emissions))+
+    geom_line(aes(y = emissions, color = "Emissioni reali")) +
+    geom_line(aes(y = theorical_nuclear_emissions, color = "Emissioni teoriche")) +
+    labs(colour = "Legenda") +
+    xlab('Anni') + 
+    ylab('Tonnellate di CO2 emesse') + 
+    scale_y_log10() # usiamo una scala logaritmica per visualizzare meglio i dati, in particolare la linea delle emissioni teoriche sarebbe troppo bassa e si sovrapporrebbe all'asse x
+
+```
+
+
+
+## Altre considerazioni
+
+* Le due linee hanno un andamento identico perche' le emissioni teoriche sono calcolate sulla stessa quantita' di energia prodotta.
+* Tenendo conto della scala logaritmica, e' molto evidente la differenza tra le due diverse fonti. 
+* Le emissioni teoriche raggiungono un picco di 10^7 tonnellate, mentre quelle reali raggiungono 10^11 tonnellate.
+
+
+
+## Il lato negativo del nucleare
+
+Gli svantaggi del nucleare sono:
+
+* Le scorie del combustibile nucleare esaurito hanno dei tempi di smaltimento molto lunghi in base alla loro radioattivita'. 
+* Il costo di produzione degli impianti e' proibitivo a causa delle normative di sicurezza da rispettare.
+* Il materiale nucleare e' limitato, per esempio l'uranio e' un elemento molto raro.
+
+
+
+## Le scorie nucleari
+
+I tre tipi di scorie sono:
+
+1. _Bassa attivita'_, necessitano di 20/30 anni per il loro smaltimento, sono il 90% dei rifiuti prodotti dalle centrali. 
+2. _Media attivita'_, necessitano di 300 anni circa, si tratta delle scorie ottenute dallo smaltimento di vecchie centrali nucleari. 
+3. _Alta attivita'_,  necessitano di *migliaia* di anni e sono il risultato di diversi processi di raffinazione del materiale nucleare grezzo per rendere la resa energetica maggiore, costituiscono il 95% della radioattivita' complessiva.
+
+
+
+## Smaltimento
+
+* I metodo di smaltimento del materiale nucleare prevede che il contenimento delle scorie avvenga in appositi contenitori resistenti alla corrosione provocata dalle radiazioni ionizzanti. 
+* Questi contenitori poi vengono inseriti in dei siti controllati (per scongiurare qualsiasi attivita' terroristica contro l'ambiente) e spesso difficili da raggiungere, come per esempio su fondali oceanici, o sottoterra, in profondita' di formazioni geologiche argillose. 
+* I contenitori sono diversi a seconda del tipo di scoria. 
+* Nel caso delle scorie ad alta attivita' per esempio, la riduzione della radioattivita' fino a valori non nocivi richiede centinaia di migliaia di anni, dunque i contenitori (in genere prodotti con particolari leghe di metallo) devono durare nel tempo e non perdere le proprie caratteristiche.
+
+
+
+## In conclusione
+
+* Gli ostacoli piu' grandi da superare per la migrazione totale dalle fonti di energia tradizionali al nucleare sono rappresentati soprattutto dai costi per l'allestimento di impianti nucleari a norma. 
+* Prima o poi questi ostacoli verranno affrontati per la necessita' di ridurre le emissioni in costante crescita anno dopo anno.
+* Utilizzando le tecniche e tecnologie di smaltimento delle scorie, potra' essere possibile sfruttare l'energia nucleare per produrre enormi quanita' di energia con poco materiale ed emissioni quasi al pari delle fonti rinnovabili.
